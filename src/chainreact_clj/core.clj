@@ -5,13 +5,10 @@
 
 (def board-size 8)
 (def player-size 2)
+(def initial-player 1)
+
 (def orb-counts {:corner 2 :edge 3 :all 4})
   
-;Given row and column, get an element from a 2D vector
-(defn get-elem-from-2Dvector 
-  [v row col] 
-  (nth (nth v row) col))
-
 ;Given row and column, return how many maximum orbs a cell can have
 ;Corners have 2, Edges 3 and Rest 4
 (defn get-max-orbs
@@ -33,6 +30,27 @@
     ;Anything else returns 4
     :else
       (:all orb-counts)
+    ))
+
+;Given a row and a column returns the initial state of the cell
+(defn get-initial-state
+  [row col]
+  (let [max-orb-count (get-max-orbs row col)]
+    {:owner nil :max-orbs max-orb-count :curr-orbs nil}
+    ))
+
+;Given a row and column and the player returns an altered version of the board
+;Cases:
+; 1. If the row doesn't exist, assoc row and column, set player, max orbs, set current orbs as 1 and return
+; 2. If row exists but column doesnt, add column, set player, max orbs, set current orbs as 1 and return
+; finally, if old-board doesn't have the specific row col value, add it, set player, max orbs, set current orbs as 1 and return
+(defn get-new-board
+  [old-board row col player]
+  (cond
+    (= (old-board row) nil) 
+      (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col) :curr-orbs 1}})
+    (= ((old-board row) col) nil)
+      (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col) :curr-orbs 1}))
     ))
 
 (defn -main [& args])
