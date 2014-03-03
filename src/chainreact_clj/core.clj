@@ -36,21 +36,135 @@
 (defn get-initial-state
   [row col]
   (let [max-orb-count (get-max-orbs row col)]
-    {:owner nil :max-orbs max-orb-count :curr-orbs nil}
+    {:owner nil :max-orbs max-orb-count :curr-orbs 0}
     ))
+
+;Checks if a row and column are valid and returns a Boolean result
+(defn is-valid-rc
+  [row col]
+  (and (>= row 0) (< row board-size) (>= col 0) (< col board-size)))
+
+;Defines a map of the 4 possible move combinations for every row, col pair
+(def moves '({:x -1 :y 0} {:x 1 :y 0} {:x 0 :y -1} {:x 0 :y 1}))
+
+;Creates a replicated list of row col maps
+(defn rc-values [row col]
+  (replicate 4 {:x row :y col})) 
+
+;Sums each move combination with the row col pair and returns all moves
+(defn all-moves
+  [row col]
+  (map 
+    (fn [move rc]  
+      {:x (+ (:x move)(:x rc)) 
+       :y (+ (:y move) (:y rc))}) 
+    moves 
+    (rc-values row col)))
+
+;Filters the result of all-moves and returns only valid ones
+(defn valid-moves
+  [row col]
+  (filter 
+    (fn [move] 
+      (and 
+        (>= (:x move) 0) (>= (:y move) 0) 
+        (< (:x move) board-size) (< (:y move) board-size))) 
+    (all-moves row col)))
+
+(declare get-new-board)
+
+;THE CHAIN REACTION- The Magic Happens Here
+;For every possible valid move around the given cell, increment curr orbs, set owner to player and recurse
+
+(defn chain-react
+  [old-board row col player]
+    (let [moves-list (valid-moves row col)]
+      (loop [moves moves-list index 0 board old-board]
+        (if (>= index 4) 
+          board
+          (when (seq moves)
+            (let [x (:x (first moves))
+                y (:y (first moves))]
+            (recur (rest moves) (inc index) (get-new-board board x y player true))))
+        ))))
+
 
 ;Given a row and column and the player returns an altered version of the board
 ;Cases:
+;IF Valid Row and Column, then:
 ; 1. If the row doesn't exist, assoc row and column, set player, max orbs, set current orbs as 1 and return
 ; 2. If row exists but column doesnt, add column, set player, max orbs, set current orbs as 1 and return
-; finally, if old-board doesn't have the specific row col value, add it, set player, max orbs, set current orbs as 1 and return
-(defn get-new-board
-  [old-board row col player]
-  (cond
-    (= (old-board row) nil) 
-      (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col) :curr-orbs 1}})
-    (= ((old-board row) col) nil)
-      (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col) :curr-orbs 1}))
-    ))
+; 3. If the row and column exist, one of these things happen
+;    3a. :curr-orbs+1 is < :max-orbs
+;         3a1. :owner and player don't match -> Do nothing 
+;         3a2. :owner and player match -> Increment current orbs and send back a new map
+;    3b. :curr-orbs+1 is >= :max-orbs
+;         3b1. Chain react, all orbs in the path now have :owner = player
 
-(defn -main [& args])
+(defn get-new-board
+  ([old-board row col player] 
+    (get-new-board old-board row col player false))
+  ([old-board row col player is-react]
+   (cond
+    (= (is-valid-rc row col) true)
+      (cond
+        (= (old-board row) nil) 
+          (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col) :curr-orbs 1}})
+        (= ((old-board row) col) nil)
+          (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col) :curr-orbs 1}))
+        (< (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
+          (cond
+            (or (= player (:owner ((old-board row) col))) (= is-react true))
+              (assoc old-board row (assoc (old-board row) col 
+                  {:owner player 
+                   :max-orbs (:max-orbs ((old-board row) col)) 
+                   :curr-orbs  (inc (:curr-orbs ((old-board row) col)))
+                   }))
+            :else
+              old-board
+          )
+        (>= (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
+          (chain-react (assoc old-board row (assoc (old-board row) col
+                             {:owner nil
+                              :max-orbs (:max-orbs ((old-board row) col))
+                              :curr-orbs 0})) row col player)
+      ))))
+
+;Helper Methods to find the Winner, if any
+
+;Given the board map this functions extracts only the cells for non nil row col values
+(defn get-all-cells 
+  [board] 
+  (filter 
+    #(not= % nil) 
+    (for 
+      [x (range board-size) y (range board-size)] 
+      (get-in board [x y])))) 
+
+;This method returns count of all cells that have :owner nil
+(defn count-of-nil-cells
+  [board] 
+  (count (filter #(= (:owner %) nil) (get-all-cells board))))
+
+;This method returns the count of cells a player owns, given board and player
+(defn count-of-player-cells 
+  [board player] 
+  (count (filter #(= (:owner %) player) (get-all-cells board))))
+
+;This method excludes the :owner nil cells and returns the count of valid(owned by a player) cells on the board
+(defn count-of-valid-cells 
+  [board] 
+  (- (count (get-all-cells board)) (count-of-nil-cells board)))
+
+;This method returns a list containing a single winner if any or empty list
+(defn winner
+  [board]
+  (filter
+    #(and (> (count-of-player-cells board %) ) 
+          (= (count-of-player-cells board %) (count-of-valid-cells board)))
+    (range player-size)))
+
+(defn -main [& args]
+  (try (get-new-board {1 {2 {:owner 1, :max-orbs 4, :curr-orbs 3}}} 1 2 1)
+       (catch Exception e (println e))))
+
