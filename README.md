@@ -8,12 +8,14 @@ This is an attempt to build a Clojure version of the same game to see how the de
 
 To play the game, clone the repo, and run:
 
+```
 lein run <board-size> <number-of-players>
+```
 
 To play enter "row column" where the move is made (Yes, not sweet, but building UI's with Swing is not sweet either)
 
 Example:
-
+```
 chainreact-clj [master] lein run 8 2
 (("++  " "+++ " "+++ " "+++ " "+++ " "+++ " "+++ " "++  ")
  ("+++ " "++++" "++++" "++++" "++++" "++++" "++++" "+++ ")
@@ -76,4 +78,4 @@ Player 0's turn
 Player 1's turn
 Player 0 WON
 
-
+```
