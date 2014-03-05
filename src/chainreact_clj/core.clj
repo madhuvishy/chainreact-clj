@@ -121,10 +121,7 @@
               old-board
           )
         (>= (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
-          (chain-react (assoc old-board row (assoc (old-board row) col
-                             {:owner nil
-                              :max-orbs (:max-orbs ((old-board row) col))
-                              :curr-orbs 0})) row col player board-size)
+          (chain-react (assoc old-board row (dissoc (get old-board row) col)) row col player board-size)
       ))))
 
 ;Helper Methods to find the Winner, if any

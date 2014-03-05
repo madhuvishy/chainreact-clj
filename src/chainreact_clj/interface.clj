@@ -38,15 +38,13 @@
         0
         (inc old-player)))   
 
-
-(defn -main [& args]
-  (let [board-size (read-string (first args))
-        player-size (read-string (second args))]
-        (draw-board {} board-size) 
-        (loop [input (read-line)
+(defn play
+  [board-size player-size]
+    (loop [input (read-line)
                board {}
-               player 0]
-          (when-not (= ":q" input)
+               player 0
+               move-count 0]
+          (when-not (= ":q" input) 
             (let [new-board (get-new-board 
                               board 
                               (first (split-input input))
@@ -55,6 +53,23 @@
                               board-size)
                   new-player (if (= new-board board) 
                                player
-                               (get-next-player player player-size))]
+                               (get-next-player player player-size))
+                  new-move-count (if (= new-board board)
+                                   move-count
+                                   (inc move-count))]
               (draw-board new-board board-size) 
-              (recur (read-line) new-board new-player ))))))
+              ;(println new-board)
+              (println (str "Player " new-player "'s turn"))
+              (if (and 
+                    (= (count (winner new-board board-size player-size)) 1)
+                    (> move-count 2))
+                      (println (str "Player " (first (winner new-board board-size player-size)) " WON"))
+                  (recur (read-line) new-board new-player new-move-count))))))
+
+(defn -main [& args]
+  (let [board-size (read-string (first args))
+        player-size (read-string (second args))]
+        (draw-board {} board-size) 
+        (println (str "Player 0's turn"))
+        (play board-size player-size)
+        ))
