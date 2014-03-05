@@ -1,11 +1,19 @@
-(ns chainreact-clj.core
-  (:require [clojure.data.json :as json])
-  (:use seesaw.core)
-)
+(ns chainreact-clj.core)
 
+;Defines a map of the possible orb counts for a type of cell
 (def orb-counts {:corner 2 :edge 3 :all 4})
-  
+
+;Defines a map of the 4 possible move combinations for every row, col pair
+(def moves '({:x -1 :y 0} {:x 1 :y 0} {:x 0 :y -1} {:x 0 :y 1}))
+
+ 
 (declare get-new-board)
+
+;Checks if a row and column are valid and returns a Boolean result
+(defn is-valid-rc
+  [row col board-size]
+  (and (>= row 0) (< row board-size) (>= col 0) (< col board-size)))
+
 
 ;Given row and column, return how many maximum orbs a cell can have
 ;Corners have 2, Edges 3 and Rest 4
@@ -13,7 +21,7 @@
   [row col board-size]
   (cond
     ;Check if valid row and column, if not return nil
-    (or (< row 0) (< col 0) (>= row board-size) (>= col board-size))
+    (not (is-valid-rc row col board-size))
       nil
     ;If row and col are (0,0) (0,boardsize-1) (boardsize-1,0) (boardsize-1,boardsize-1)
     ;It's a corner so return 2   
@@ -36,14 +44,6 @@
   (let [max-orb-count (get-max-orbs row col board-size)]
     {:owner nil :max-orbs max-orb-count :curr-orbs 0}
     ))
-
-;Checks if a row and column are valid and returns a Boolean result
-(defn is-valid-rc
-  [row col board-size]
-  (and (>= row 0) (< row board-size) (>= col 0) (< col board-size)))
-
-;Defines a map of the 4 possible move combinations for every row, col pair
-(def moves '({:x -1 :y 0} {:x 1 :y 0} {:x 0 :y -1} {:x 0 :y 1}))
 
 ;Creates a replicated list of row col maps
 (defn rc-values [row col]
@@ -161,7 +161,7 @@
           (= (count-of-player-cells board % board-size) (count-of-valid-cells board board-size)))
     (range player-size)))
 
-(defn -main [& args]
-  (try (get-new-board {1 {2 {:owner 1, :max-orbs 4, :curr-orbs 3}}} 1 2 1 8)
-       (catch Exception e (println e))))
+;(defn -main [& args]
+;  (try (println(get-new-board {1 {2 {:owner 1, :max-orbs 4, :curr-orbs 3}}} 1 2 1 8 2 ))
+;       (catch Exception e (println e))))
 
