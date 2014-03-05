@@ -6,14 +6,12 @@
 ;Defines a map of the 4 possible move combinations for every row, col pair
 (def moves '({:x -1 :y 0} {:x 1 :y 0} {:x 0 :y -1} {:x 0 :y 1}))
 
- 
 (declare get-new-board)
 
 ;Checks if a row and column are valid and returns a Boolean result
 (defn is-valid-rc
   [row col board-size]
   (and (>= row 0) (< row board-size) (>= col 0) (< col board-size)))
-
 
 ;Given row and column, return how many maximum orbs a cell can have
 ;Corners have 2, Edges 3 and Rest 4
@@ -36,13 +34,6 @@
     ;Anything else returns 4
     :else
       (:all orb-counts)
-    ))
-
-;Given a row and a column returns the initial state of the cell
-(defn get-initial-state
-  [row col board-size]
-  (let [max-orb-count (get-max-orbs row col board-size)]
-    {:owner nil :max-orbs max-orb-count :curr-orbs 0}
     ))
 
 ;Creates a replicated list of row col maps
@@ -77,7 +68,7 @@
   [old-board row col player board-size]
     (let [moves-list (valid-moves row col board-size)]
       (loop [moves moves-list index 0 board old-board]
-        (if (>= index 4) 
+        (if (>= index (count moves-list)) 
           board
           (when (seq moves)
             (let [x (:x (first moves))
@@ -123,6 +114,14 @@
         (>= (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
           (chain-react (assoc old-board row (dissoc (get old-board row) col)) row col player board-size)
       ))))
+
+
+;This method finds which player the next turn belongs to
+(defn get-next-player
+    [old-player player-size]
+    (if (= player-size (inc old-player))
+              0   
+              (inc old-player)))  
 
 ;Helper Methods to find the Winner, if any
 
