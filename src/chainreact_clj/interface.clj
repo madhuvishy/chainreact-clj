@@ -57,23 +57,23 @@
 ;; from the player and calls draw-board to draw a new board to the console
 (defn play
   [board-size player-size]
-  (loop [move (get-move! board-size) ;; may quit if input is :q
-         board {}
+  (loop [board {}
          player 0]
-    (when-not (= move ::quit)
-      (let [new-board (get-new-board
-                       board
-                       move
-                       player
-                       board-size)
-            new-player (if (= new-board board)
+    (let [move (get-move! board-size)]
+      (when-not (= move ::quit)
+        (let [new-board (get-new-board
+                         board
+                         move
                          player
-                         (get-next-player player player-size))]
-        (draw-board new-board board-size)
-        (if (winner new-board board-size player-size)
-          (println (str "Player " (winner new-board board-size player-size) " WON"))
-          (do (println (str "Player " new-player "'s turn"))
-              (recur (get-move! board-size) new-board new-player)))))))
+                         board-size)
+              new-player (if (= new-board board)
+                           player
+                           (get-next-player player player-size))]
+          (draw-board new-board board-size)
+          (if (winner new-board board-size player-size)
+            (println (str "Player " (winner new-board board-size player-size) " WON"))
+            (do (println (str "Player " new-player "'s turn"))
+                (recur new-board new-player))))))))
 
 
 ;;Reads command line arguments for board-size and player-size and starts the Play
