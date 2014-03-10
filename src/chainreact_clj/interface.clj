@@ -70,10 +70,10 @@
                          player
                          (get-next-player player player-size))]
         (draw-board new-board board-size)
-        (println (str "Player " new-player "'s turn"))
         (if (winner new-board board-size player-size)
           (println (str "Player " (winner new-board board-size player-size) " WON"))
-          (recur (get-move! board-size) new-board new-player))))))
+          (do (println (str "Player " new-player "'s turn"))
+              (recur (get-move! board-size) new-board new-player)))))))
 
 
 ;;Reads command line arguments for board-size and player-size and starts the Play
