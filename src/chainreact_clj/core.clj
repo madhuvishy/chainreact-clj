@@ -81,7 +81,7 @@
         (when (seq moves)
           (let [x (:x (first moves))
                 y (:y (first moves))]
-            (recur (rest moves) (inc index) (get-new-board old-board [x y] player true))))
+            (recur (rest moves) (inc index) (get-new-board board [x y] player true))))
         ))))
 
 
@@ -91,37 +91,37 @@
 ;; 1. If the row doesn't exist, assoc row and column, set player, max orbs, set current orbs as 1 and return
 ;; 2. If row exists but column doesnt, add column, set player, max orbs, set current orbs as 1 and return
 ;; 3. If the row and column exist, one of these things happen
-;;    3a. :curr-orbs+1 is < :max-orbs
-;;         3a1. :owner and player don't match -> Do nothing
-;;         3a2. :owner and player match -> Increment current orbs and send back a new map
-;;    3b. :curr-orbs+1 is >= :max-orbs
-;;         3b1. Chain react, all orbs in the path now have :owner = player
+;;    3a. :owner and player don't match && !is-react -> Do nothing
+;;    3b. :curr-orbs+1 is < :max-orbs -> Increment current orbs and send back a new map
+;;    3c. :curr-orbs+1 is >= :max-orbs -> Chain react, all orbs in the path now have :owner = player
 
 (defn get-new-board
   ([old-board [row col] player]
      (get-new-board old-board [row col] player false))
   ([old-board [row col] player is-react]
-     (cond
-      (= (is-valid-rc row col (get-board-size old-board)) true)
-      (cond
-       (= (old-board row) nil)
-       (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col (get-board-size old-board)) :curr-orbs 1}})
-       (= ((old-board row) col) nil)
-       (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col (get-board-size old-board)) :curr-orbs 1}))
-       (< (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
+     (when (= (is-valid-rc row col (get-board-size old-board)) true)
        (cond
-        (or (= player (:owner ((old-board row) col))) (= is-react true))
-        (assoc old-board row (assoc (old-board row) col
-                                    {:owner player
-                                     :max-orbs (:max-orbs ((old-board row) col))
-                                     :curr-orbs  (inc (:curr-orbs ((old-board row) col)))
-                                     }))
+        (= (old-board row) nil)
+        (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col (get-board-size old-board)) :curr-orbs 1}})
+
+        (= ((old-board row) col) nil)
+        (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col (get-board-size old-board)) :curr-orbs 1}))
+
         :else
-        old-board
-        )
-       (>= (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
-       (chain-react (assoc old-board row (dissoc (get old-board row) col)) row col player)
-       ))))
+        (cond
+         (and (not= player (:owner ((old-board row) col))) (not is-react))
+         old-board
+
+         (< (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
+         (assoc old-board row (assoc (old-board row) col
+                                     {:owner player
+                                      :max-orbs (:max-orbs ((old-board row) col))
+                                      :curr-orbs  (inc (:curr-orbs ((old-board row) col)))
+                                      }))
+
+         ;;(>= (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
+         :else
+         (chain-react (assoc old-board row (dissoc (get old-board row) col)) row col player))))))
 
 
 ;;This method finds which player the next turn belongs to
