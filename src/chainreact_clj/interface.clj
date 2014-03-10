@@ -67,10 +67,9 @@
 
 
 ;;Reads command line arguments for board-size and player-size and starts the Play
-(defn -main [& args]
-  (let [board-size (read-string (first args))
-        player-size (read-string (second args))]
+(defn -main [& [board-size player-size]]
+  (let [board-size (Long/parseLong board-size)
+        player-size (Long/parseLong player-size)]
     (draw-board {} board-size)
     (println (str "Player 0's turn"))
-    (play board-size player-size)
-    ))
+    (play board-size player-size)))
