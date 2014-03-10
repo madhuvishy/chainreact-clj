@@ -6,7 +6,7 @@
 ;;Splits command line input in style "row col" and returns '(row col)
 (defn split-input
   [input]
-  (map #(read-string %) (split input #" ")))
+  (map #(Long/parseLong %) (split input #" ")))
 
 ;;Returns printable value for a given cell
 (defn get-print-value
@@ -36,34 +36,44 @@
             (get-row-values row board board-size)))
   )
 
+(defn get-move!
+  "Get a row and col from next player, exiting the process if :q is
+  passed."
+  [board-size]
+  (let [input (read-line)]
+    (if (= ":q" input)
+      ::quit
+      (try
+        (let [[row col] (split-input input)]
+          (if (and row col (is-valid-rc row col board-size))
+            [row col]
+            (do (println "Move out of bounds")
+                (get-move! board-size))))
+        (catch Throwable e
+          (println "Invalid input")
+          (get-move! board-size))))))
+
 ;;The main method that enters into read loop, reads the move position
 ;; from the player and calls draw-board to draw a new board to the console
 (defn play
   [board-size player-size]
-  (loop [input (read-line)
+  (loop [move (get-move! board-size) ;; may quit if input is :q
          board {}
-         player 0
-         move-count 0]
-    (when-not (= ":q" input)
+         player 0]
+    (when-not (= move ::quit)
       (let [new-board (get-new-board
                        board
-                       (first (split-input input))
-                       (second (split-input input))
+                       move
                        player
                        board-size)
             new-player (if (= new-board board)
                          player
-                         (get-next-player player player-size))
-            new-move-count (if (= new-board board)
-                             move-count
-                             (inc move-count))]
+                         (get-next-player player player-size))]
         (draw-board new-board board-size)
         (println (str "Player " new-player "'s turn"))
-        (if (and
-             (= (count (winner new-board board-size player-size)) 1)
-             (> new-move-count 2))
-          (println (str "Player " (first (winner new-board board-size player-size)) " WON"))
-          (recur (read-line) new-board new-player new-move-count))))))
+        (if (winner new-board board-size player-size)
+          (println (str "Player " (winner new-board board-size player-size) " WON"))
+          (recur (get-move! board-size) new-board new-player))))))
 
 
 ;;Reads command line arguments for board-size and player-size and starts the Play

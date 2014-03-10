@@ -73,7 +73,7 @@
         (when (seq moves)
           (let [x (:x (first moves))
                 y (:y (first moves))]
-            (recur (rest moves) (inc index) (get-new-board board x y player board-size true))))
+            (recur (rest moves) (inc index) (get-new-board board [x y] player board-size true))))
         ))))
 
 
@@ -90,9 +90,9 @@
 ;;         3b1. Chain react, all orbs in the path now have :owner = player
 
 (defn get-new-board
-  ([old-board row col player board-size]
-     (get-new-board old-board row col player board-size false))
-  ([old-board row col player board-size is-react]
+  ([old-board [row col] player board-size]
+     (get-new-board old-board [row col] player board-size false))
+  ([old-board [row col] player board-size is-react]
      (cond
       (= (is-valid-rc row col board-size) true)
       (cond
@@ -149,13 +149,18 @@
   [board board-size]
   (- (count (get-all-cells board board-size)) (count-of-nil-cells board board-size)))
 
-;;This method returns a list containing a single winner if any or empty list
 (defn winner
+  "Returns a winner if one exists on the board. A player cannot win on the first move."
   [board board-size player-size]
-  (filter
-   #(and (> (count-of-player-cells board % board-size) )
-         (= (count-of-player-cells board % board-size) (count-of-valid-cells board board-size)))
-   (range player-size)))
+  ;; the board looks like this: {0 {0 {:curr-orbs 1 ...}}}
+  (when (not (and (= 1 (count board))
+                  (= 1 (count (second (first board))))
+                  (= 1 (:curr-orbs (second (first (second (first board))))))))
+    (first
+     (filter
+      #(and (> (count-of-player-cells board % board-size) )
+            (= (count-of-player-cells board % board-size) (count-of-valid-cells board board-size)))
+      (range player-size)))))
 
 ;; (defn -main [& args]
 ;;  (try (println(get-new-board {1 {2 {:owner 1, :max-orbs 4, :curr-orbs 3}}} 1 2 1 8 2 ))
