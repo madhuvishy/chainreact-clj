@@ -6,6 +6,14 @@
 ;;Defines a map of the 4 possible move combinations for every row, col pair
 (def moves '({:x -1 :y 0} {:x 1 :y 0} {:x 0 :y -1} {:x 0 :y 1}))
 
+(defn new-board [board-size]
+  (with-meta {} {:board-size board-size}))
+
+(defn get-board-size [board]
+  (if (map? board)
+    (:board-size (meta board))
+    (throw (Exception. (str "Invalid board, got " (type board))))))
+
 (declare get-new-board)
 
 ;;Checks if a row and column are valid and returns a Boolean result
@@ -65,15 +73,15 @@
 ;; For every possible valid move around the given cell, increment curr orbs, set owner to player and recurse
 
 (defn chain-react
-  [old-board row col player board-size]
-  (let [moves-list (valid-moves row col board-size)]
+  [old-board row col player]
+  (let [moves-list (valid-moves row col (get-board-size old-board))]
     (loop [moves moves-list index 0 board old-board]
       (if (>= index (count moves-list))
         board
         (when (seq moves)
           (let [x (:x (first moves))
                 y (:y (first moves))]
-            (recur (rest moves) (inc index) (get-new-board board [x y] player board-size true))))
+            (recur (rest moves) (inc index) (get-new-board old-board [x y] player true))))
         ))))
 
 
@@ -90,16 +98,16 @@
 ;;         3b1. Chain react, all orbs in the path now have :owner = player
 
 (defn get-new-board
-  ([old-board [row col] player board-size]
-     (get-new-board old-board [row col] player board-size false))
-  ([old-board [row col] player board-size is-react]
+  ([old-board [row col] player]
+     (get-new-board old-board [row col] player false))
+  ([old-board [row col] player is-react]
      (cond
-      (= (is-valid-rc row col board-size) true)
+      (= (is-valid-rc row col (get-board-size old-board)) true)
       (cond
        (= (old-board row) nil)
-       (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col board-size) :curr-orbs 1}})
+       (assoc old-board row {col {:owner player :max-orbs (get-max-orbs row col (get-board-size old-board)) :curr-orbs 1}})
        (= ((old-board row) col) nil)
-       (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col board-size) :curr-orbs 1}))
+       (assoc old-board row (assoc (old-board row) col {:owner player :max-orbs (get-max-orbs row col (get-board-size old-board)) :curr-orbs 1}))
        (< (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
        (cond
         (or (= player (:owner ((old-board row) col))) (= is-react true))
@@ -112,7 +120,7 @@
         old-board
         )
        (>= (inc (:curr-orbs ((old-board row) col))) (:max-orbs ((old-board row) col)))
-       (chain-react (assoc old-board row (dissoc (get old-board row) col)) row col player board-size)
+       (chain-react (assoc old-board row (dissoc (get old-board row) col)) row col player)
        ))))
 
 
@@ -127,40 +135,42 @@
 
 ;;Given the board map this functions extracts only the cells for non nil row col values
 (defn get-all-cells
-  [board board-size]
-  (filter
-   #(not= % nil)
-   (for
-       [x (range board-size) y (range board-size)]
-     (get-in board [x y]))))
+  [board]
+  (let [board-size (get-board-size board)]
+    (filter
+     #(not= % nil)
+     (for
+         [x (range board-size) y (range board-size)]
+       (get-in board [x y])))))
 
 ;;This method returns count of all cells that have :owner nil
 (defn count-of-nil-cells
-  [board board-size]
-  (count (filter #(= (:owner %) nil) (get-all-cells board board-size))))
+  [board]
+  (count (filter #(= (:owner %) nil) (get-all-cells board))))
 
 ;;This method returns the count of cells a player owns, given board and player
 (defn count-of-player-cells
-  [board player board-size]
-  (count (filter #(= (:owner %) player) (get-all-cells board board-size))))
+  [board player]
+  (count (filter #(= (:owner %) player) (get-all-cells board))))
 
 ;;This method excludes the :owner nil cells and returns the count of valid(owned by a player) cells on the board
 (defn count-of-valid-cells
-  [board board-size]
-  (- (count (get-all-cells board board-size)) (count-of-nil-cells board board-size)))
+  [board]
+  (- (count (get-all-cells board)) (count-of-nil-cells board)))
 
 (defn winner
   "Returns a winner if one exists on the board. A player cannot win on the first move."
-  [board board-size player-size]
+  [board player-size]
   ;; the board looks like this: {0 {0 {:curr-orbs 1 ...}}}
-  (when (not (and (= 1 (count board))
-                  (= 1 (count (second (first board))))
-                  (= 1 (:curr-orbs (second (first (second (first board))))))))
-    (first
-     (filter
-      #(and (> (count-of-player-cells board % board-size) )
-            (= (count-of-player-cells board % board-size) (count-of-valid-cells board board-size)))
-      (range player-size)))))
+  (let [board-size (get-board-size board)]
+    (when (not (and (= 1 (count board))
+                    (= 1 (count (second (first board))))
+                    (= 1 (:curr-orbs (second (first (second (first board))))))))
+      (first
+       (filter
+        #(and (> (count-of-player-cells board %) )
+              (= (count-of-player-cells board %) (count-of-valid-cells board)))
+        (range player-size))))))
 
 ;; (defn -main [& args]
 ;;  (try (println(get-new-board {1 {2 {:owner 1, :max-orbs 4, :curr-orbs 3}}} 1 2 1 8 2 ))
